@@ -1,7 +1,11 @@
 package com.mariafernandes.sprintly.controller;
 
+import com.mariafernandes.sprintly.domain.Membership;
 import com.mariafernandes.sprintly.domain.Organization;
+import com.mariafernandes.sprintly.domain.User;
+import com.mariafernandes.sprintly.repository.MembershipRepository;
 import com.mariafernandes.sprintly.repository.OrganizationRepository;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -10,19 +14,25 @@ import java.util.List;
 @RequestMapping("/organizations")
 public class OrganizationController {
 
-    private final OrganizationRepository repository;
+    private final OrganizationRepository organizationRepository;
+    private final MembershipRepository membershipRepository;
 
-    public OrganizationController(OrganizationRepository repository) {
-        this.repository = repository;
+    public OrganizationController(OrganizationRepository organizationRepository,
+                                   MembershipRepository membershipRepository) {
+        this.organizationRepository = organizationRepository;
+        this.membershipRepository = membershipRepository;
     }
 
     @PostMapping
-    public Organization create(@RequestBody Organization organization) {
-        return repository.save(organization);
+    public Organization create(@RequestBody Organization organization, @AuthenticationPrincipal User currentUser) {
+        Organization saved = organizationRepository.save(organization);
+        Membership membership = new Membership(currentUser, saved, Membership.Role.ADMIN);
+        membershipRepository.save(membership);
+        return saved;
     }
 
     @GetMapping
     public List<Organization> findAll() {
-        return repository.findAll();
+        return organizationRepository.findAll();
     }
 }
