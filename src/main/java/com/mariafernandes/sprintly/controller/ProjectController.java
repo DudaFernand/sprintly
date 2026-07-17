@@ -1,7 +1,9 @@
 package com.mariafernandes.sprintly.controller;
 
 import com.mariafernandes.sprintly.domain.Project;
-import com.mariafernandes.sprintly.repository.ProjectRepository;
+import com.mariafernandes.sprintly.domain.User;
+import com.mariafernandes.sprintly.service.ProjectService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -10,19 +12,19 @@ import java.util.List;
 @RequestMapping("/projects")
 public class ProjectController {
 
-    private final ProjectRepository repository;
+    private final ProjectService service;
 
-    public ProjectController(ProjectRepository repository) {
-        this.repository = repository;
+    public ProjectController(ProjectService service) {
+        this.service = service;
     }
 
     @PostMapping
-    public Project create(@RequestBody Project project) {
-        return repository.save(project);
+    public Project create(@RequestBody Project project, @AuthenticationPrincipal User currentUser) {
+        return service.create(project, currentUser);
     }
 
     @GetMapping
-    public List<Project> findByTeam(@RequestParam Long teamId) {
-        return repository.findByTeamId(teamId);
+    public List<Project> findByTeam(@RequestParam Long teamId, @AuthenticationPrincipal User currentUser) {
+        return service.findByTeam(teamId, currentUser);
     }
 }

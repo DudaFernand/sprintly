@@ -1,7 +1,9 @@
 package com.mariafernandes.sprintly.controller;
 
 import com.mariafernandes.sprintly.domain.Team;
-import com.mariafernandes.sprintly.repository.TeamRepository;
+import com.mariafernandes.sprintly.domain.User;
+import com.mariafernandes.sprintly.service.TeamService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -10,19 +12,19 @@ import java.util.List;
 @RequestMapping("/teams")
 public class TeamController {
 
-    private final TeamRepository repository;
+    private final TeamService service;
 
-    public TeamController(TeamRepository repository) {
-        this.repository = repository;
+    public TeamController(TeamService service) {
+        this.service = service;
     }
 
     @PostMapping
-    public Team create(@RequestBody Team team) {
-        return repository.save(team);
+    public Team create(@RequestBody Team team, @AuthenticationPrincipal User currentUser) {
+        return service.create(team, currentUser);
     }
 
     @GetMapping
-    public List<Team> findByOrganization(@RequestParam Long organizationId) {
-        return repository.findByOrganizationId(organizationId);
+    public List<Team> findByOrganization(@RequestParam Long organizationId, @AuthenticationPrincipal User currentUser) {
+        return service.findByOrganization(organizationId, currentUser);
     }
 }

@@ -1,7 +1,9 @@
 package com.mariafernandes.sprintly.controller;
 
 import com.mariafernandes.sprintly.domain.Board;
-import com.mariafernandes.sprintly.repository.BoardRepository;
+import com.mariafernandes.sprintly.domain.User;
+import com.mariafernandes.sprintly.service.BoardService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -10,19 +12,19 @@ import java.util.List;
 @RequestMapping("/boards")
 public class BoardController {
 
-    private final BoardRepository repository;
+    private final BoardService service;
 
-    public BoardController(BoardRepository repository) {
-        this.repository = repository;
+    public BoardController(BoardService service) {
+        this.service = service;
     }
 
     @PostMapping
-    public Board create(@RequestBody Board board) {
-        return repository.save(board);
+    public Board create(@RequestBody Board board, @AuthenticationPrincipal User currentUser) {
+        return service.create(board, currentUser);
     }
 
     @GetMapping
     public List<Board> findByProject(@RequestParam Long projectId) {
-        return repository.findByProjectId(projectId);
+        return service.findByProject(projectId);
     }
 }

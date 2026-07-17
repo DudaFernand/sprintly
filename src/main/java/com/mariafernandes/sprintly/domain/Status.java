@@ -19,16 +19,16 @@ public class Status {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
-    private Integer order;
+    @Column(name = "sort_order", nullable = false)
+    private Integer sortOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "board_id", nullable = false)
     private Board board;
 
-    public Status(String name, Integer order, Board board) {
+    public Status(String name, Integer sortOrder, Board board) {
         this.name = name;
-        this.order = order;
+        this.sortOrder = sortOrder;
         this.board = board;
     }
 }
