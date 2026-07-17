@@ -18,11 +18,14 @@ public class TaskService {
     private final UserRepository userRepository;
     private final LabelRepository labelRepository;
     private final AuthorizationService authorizationService;
+    private final SprintRepository sprintRepository;
+    private final AuditService auditService;
 
     public TaskService(TaskRepository taskRepository, BoardRepository boardRepository,
             StatusRepository statusRepository, EpicRepository epicRepository,
             UserRepository userRepository, LabelRepository labelRepository, 
-            AuthorizationService authorizationService) {
+            AuthorizationService authorizationService, SprintRepository sprintRepository,
+            AuditService auditService) {
         this.taskRepository = taskRepository;
         this.boardRepository = boardRepository;
         this.statusRepository = statusRepository;
@@ -30,6 +33,8 @@ public class TaskService {
         this.userRepository = userRepository;
         this.labelRepository = labelRepository;
         this.authorizationService = authorizationService;
+        this.sprintRepository = sprintRepository;
+        this.auditService = auditService;
     }
 
     public Task create(CreateTaskRequest request, User reporter) {
@@ -71,13 +76,28 @@ public class TaskService {
         return taskRepository.findByBoardId(boardId);
     }
 
-    public Task updateStatus(Long taskId, Long newStatusId) {
+    public Task updateStatus(Long taskId, Long newStatusId, User currentUser) {
         Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new IllegalArgumentException("Tarefa não encontrada"));
+            .orElseThrow(() -> new IllegalArgumentException("Tarefa não encontrada"));
+    
+        Long organizationId = task.getBoard().getProject().getTeam().getOrganization().getId();
+        authorizationService.requireMembership(currentUser, organizationId);
+    
+        Status oldStatus = task.getStatus();
         Status newStatus = statusRepository.findById(newStatusId)
-                .orElseThrow(() -> new IllegalArgumentException("Status não encontrado"));
+            .orElseThrow(() -> new IllegalArgumentException("Status não encontrado"));
+    
         task.setStatus(newStatus);
-        return taskRepository.save(task);
+        Task saved = taskRepository.save(task);
+    
+        String changes = String.format(
+            "status: %s -> %s | storyPoints: %s | sprintId: %s",
+            oldStatus.getName(), newStatus.getName(),
+            task.getStoryPoints(), task.getSprint() != null ? task.getSprint().getId() : "null"
+        );
+        auditService.log(currentUser, "Task", taskId, "STATUS_CHANGE", changes);
+    
+        return saved;
     }
 
     public Task addLabel(Long taskId, Long labelId) {
@@ -93,6 +113,23 @@ public class TaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("Tarefa não encontrada"));
         task.getLabels().removeIf(l -> l.getId().equals(labelId));
+        return taskRepository.save(task);
+    }
+
+    public Task assignToSprint(Long taskId, Long sprintId, User currentUser) {
+        Task task = taskRepository.findById(taskId)
+            .orElseThrow(() -> new IllegalArgumentException("Tarefa não encontrada"));
+    
+        Long organizationId = task.getBoard().getProject().getTeam().getOrganization().getId();
+        authorizationService.requireMembership(currentUser, organizationId);
+    
+        if (sprintId == null) {
+            task.setSprint(null); // volta pro backlog
+        } else {
+            Sprint sprint = sprintRepository.findById(sprintId)
+                .orElseThrow(() -> new IllegalArgumentException("Sprint não encontrada"));
+            task.setSprint(sprint);
+        }
         return taskRepository.save(task);
     }
 }

@@ -59,9 +59,9 @@ public class Task {
     @JoinColumn(name = "assignee_id")
     private User assignee;
 
-    // @ManyToOne(fetch = FetchType.LAZY)
-    // @JoinColumn(name = "sprint_id")
-    // private Sprint sprint;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sprint_id")
+    private Sprint sprint;
 
     @ManyToMany
     @JoinTable(

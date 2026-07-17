@@ -45,11 +45,11 @@ public class StatusService {
 
     public List<Status> findByBoard(Long boardId, User currentUser) {
         Board board = boardRepository.findById(boardId)
-                .orElseThrow(() -> new IllegalArgumentException("Board não encontrado"));
-
+            .orElseThrow(() -> new IllegalArgumentException("Board não encontrado"));
+    
         Long organizationId = board.getProject().getTeam().getOrganization().getId();
         authorizationService.requireMembership(currentUser, organizationId);
-
+    
         return statusRepository.findByBoardIdOrderBySortOrder(boardId);
     }
 
@@ -73,5 +73,16 @@ public class StatusService {
                     "Não é possível remover um status com " + tasksUsingStatus + " tarefa(s) vinculada(s)");
         }
         statusRepository.delete(status);
+    }
+
+    public Status markAsDone(Long statusId, Boolean done, User currentUser) {
+        Status status = statusRepository.findById(statusId)
+            .orElseThrow(() -> new IllegalArgumentException("Status não encontrado"));
+    
+        Long organizationId = status.getBoard().getProject().getTeam().getOrganization().getId();
+        authorizationService.requireAdmin(currentUser, organizationId);
+    
+        status.setDone(done);
+        return statusRepository.save(status);
     }
 }

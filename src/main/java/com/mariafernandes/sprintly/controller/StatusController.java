@@ -8,6 +8,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/status")
@@ -34,5 +35,10 @@ public class StatusController {
                        @RequestParam Long boardId,
                        @AuthenticationPrincipal User currentUser) {
         service.delete(id, boardId, currentUser);
+    }
+
+    @PatchMapping("/{id}/done")
+    public Status markAsDone(@PathVariable Long id, @RequestBody Map<String, Boolean> body, @AuthenticationPrincipal User currentUser) {
+        return service.markAsDone(id, body.get("done"), currentUser);
     }
 }

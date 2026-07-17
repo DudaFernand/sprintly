@@ -32,12 +32,12 @@ public class TaskController {
     }
 
     @PatchMapping("/{id}/status")
-    public Task updateStatus(@PathVariable Long id, @RequestBody Map<String, Long> body) {
+    public Task updateStatus(@PathVariable Long id, @RequestBody Map<String, Long> body, @AuthenticationPrincipal User currentUser) {
         Long statusId = body.get("statusId");
         if (statusId == null) {
             throw new IllegalArgumentException("statusId é obrigatório");
         }
-        return service.updateStatus(id, statusId);
+        return service.updateStatus(id, statusId, currentUser);
     }
 
     @PostMapping("/{taskId}/labels/{labelId}")
@@ -48,5 +48,12 @@ public class TaskController {
     @DeleteMapping("/{taskId}/labels/{labelId}")
     public Task removeLabel(@PathVariable Long taskId, @PathVariable Long labelId) {
         return service.removeLabel(taskId, labelId);
+    }
+
+    @PatchMapping("/{taskId}/sprint")
+    public Task assignToSprint(@PathVariable Long taskId,
+                               @RequestBody Map<String, Long> body,
+                               @AuthenticationPrincipal User currentUser) {
+        return service.assignToSprint(taskId, body.get("sprintId"), currentUser);
     }
 }

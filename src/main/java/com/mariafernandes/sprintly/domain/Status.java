@@ -22,6 +22,9 @@ public class Status {
     @Column(name = "sort_order", nullable = false)
     private Integer sortOrder;
 
+    @Column(nullable = false)
+    private Boolean done = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "board_id", nullable = false)
     private Board board;

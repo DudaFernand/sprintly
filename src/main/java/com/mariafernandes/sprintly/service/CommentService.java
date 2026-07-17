@@ -44,7 +44,7 @@ public class CommentService {
             userRepository.findByEmail(email).ifPresent(mentionedUser -> {
                 CommentMention mention = new CommentMention(comment, mentionedUser);
                 mentionRepository.save(mention);
-                // aqui, na Fase 6, vamos publicar um evento no RabbitMQ pra notificar o usuário
+                // aqui vai haver um evento no RabbitMQ pra notificar o usuário
             })
         );
 
