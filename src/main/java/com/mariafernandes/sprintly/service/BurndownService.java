@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
 public class BurndownService {
 
     private static final Pattern CHANGE_PATTERN =
-        Pattern.compile("status: .* -> (.+) \\| storyPoints: (\\d+|null)");
+        Pattern.compile("status: .* -> (.+)\\(id=\\d+\\) \\| storyPoints: (\\d+|null)");
 
     private final SprintRepository sprintRepository;
     private final TaskRepository taskRepository;
