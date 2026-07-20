@@ -37,7 +37,10 @@ public class BoardService {
         return repository.save(board);
     }
 
-    public List<Board> findByProject(Long projectId) {
+    public List<Board> findByProject(Long projectId, User currentUser) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new IllegalArgumentException("Project não encontrado"));
+        authorizationService.requireMembership(currentUser, project.getTeam().getOrganization().getId());
         return repository.findByProjectId(projectId);
     }
 }

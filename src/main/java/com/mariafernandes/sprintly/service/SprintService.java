@@ -37,7 +37,10 @@ public class SprintService {
         return repository.save(sprint);
     }
 
-    public List<Sprint> findByProject(Long projectId) {
+    public List<Sprint> findByProject(Long projectId, User currentUser) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new IllegalArgumentException("Project não encontrado"));
+        authorizationService.requireMembership(currentUser, project.getTeam().getOrganization().getId());
         return repository.findByProjectId(projectId);
     }
 }

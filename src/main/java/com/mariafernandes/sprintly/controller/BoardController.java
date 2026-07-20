@@ -24,7 +24,7 @@ public class BoardController {
     }
 
     @GetMapping
-    public List<Board> findByProject(@RequestParam Long projectId) {
-        return service.findByProject(projectId);
+    public List<Board> findByProject(@RequestParam Long projectId, @AuthenticationPrincipal User currentUser) {
+        return service.findByProject(projectId, currentUser);
     }
 }

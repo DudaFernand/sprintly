@@ -6,6 +6,7 @@ import com.mariafernandes.sprintly.domain.User;
 import com.mariafernandes.sprintly.repository.MembershipRepository;
 import com.mariafernandes.sprintly.repository.OrganizationRepository;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,7 +33,10 @@ public class OrganizationController {
     }
 
     @GetMapping
-    public List<Organization> findAll() {
-        return organizationRepository.findAll();
+    @Transactional(readOnly = true)
+    public List<Organization> findMine(@AuthenticationPrincipal User currentUser) {
+        return membershipRepository.findByUserId(currentUser.getId()).stream()
+            .map(Membership::getOrganization)
+            .toList();
     }
 }

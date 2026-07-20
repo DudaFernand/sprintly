@@ -3,6 +3,7 @@ package com.mariafernandes.sprintly.service;
 import com.mariafernandes.sprintly.domain.*;
 import com.mariafernandes.sprintly.dto.BurndownResponse;
 import com.mariafernandes.sprintly.repository.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -15,6 +16,10 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,13 +29,23 @@ class BurndownServiceTest {
     @Mock private TaskRepository taskRepository;
     @Mock private AuditLogRepository auditLogRepository;
     @Mock private StatusRepository statusRepository;
+    @Mock private AuthorizationService authorizationService;
 
     @InjectMocks
     private BurndownService burndownService;
 
+    private User currentUser;
+
+    @BeforeEach
+    void setUp() {
+        currentUser = new User("user@teste.com", "senha");
+        currentUser.setId(10L);
+        lenient().doNothing().when(authorizationService).requireMembership(any(User.class), eq(1L));
+    }
+
     @Test
     void calculate_deveRetornarTotalStoryPointsCorreto() {
-        Sprint sprint = new Sprint("Sprint 1", null, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 10));
+        Sprint sprint = sprintComOrg();
         when(sprintRepository.findById(1L)).thenReturn(Optional.of(sprint));
 
         Task task1 = criarTask(1L, 5);
@@ -40,14 +55,14 @@ class BurndownServiceTest {
         when(auditLogRepository.findByEntityTypeAndEntityId("Task", 1L)).thenReturn(List.of());
         when(auditLogRepository.findByEntityTypeAndEntityId("Task", 2L)).thenReturn(List.of());
 
-        BurndownResponse response = burndownService.calculate(1L);
+        BurndownResponse response = burndownService.calculate(1L, currentUser);
 
         assertEquals(8, response.totalStoryPoints());
     }
 
     @Test
     void calculate_deveMostrarRemainingZeroQuandoTarefaFoiConcluidaAntesDoInicioDaSprint() {
-        Sprint sprint = new Sprint("Sprint 1", null, LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 10));
+        Sprint sprint = sprintComOrg(LocalDate.of(2026, 1, 5), LocalDate.of(2026, 1, 10));
         when(sprintRepository.findById(1L)).thenReturn(Optional.of(sprint));
 
         Task task = criarTask(1L, 5);
@@ -59,27 +74,27 @@ class BurndownServiceTest {
 
         AuditLog log = new AuditLog(null, "Task", 1L, "STATUS_CHANGE",
             "status: To Do(id=1) -> Done(id=99) | storyPoints: 5 | sprintId: 1");
-        log.setCreatedAt(LocalDateTime.of(2026, 1, 3, 10, 0)); // antes do início da sprint
+        log.setCreatedAt(LocalDateTime.of(2026, 1, 3, 10, 0));
 
         when(auditLogRepository.findByEntityTypeAndEntityId("Task", 1L)).thenReturn(List.of(log));
         when(statusRepository.findByBoardIdOrderBySortOrder(task.getBoard().getId()))
             .thenReturn(List.of(doneStatus));
 
-        BurndownResponse response = burndownService.calculate(1L);
+        BurndownResponse response = burndownService.calculate(1L, currentUser);
 
         assertEquals(0, response.points().get(0).remaining());
     }
 
     @Test
     void calculate_deveMostrarRemainingCompletoQuandoTarefaNuncaFoiConcluida() {
-        Sprint sprint = new Sprint("Sprint 1", null, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 5));
+        Sprint sprint = sprintComOrg(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 5));
         when(sprintRepository.findById(1L)).thenReturn(Optional.of(sprint));
 
         Task task = criarTask(1L, 5);
         when(taskRepository.findBySprintId(1L)).thenReturn(List.of(task));
         when(auditLogRepository.findByEntityTypeAndEntityId("Task", 1L)).thenReturn(List.of());
 
-        BurndownResponse response = burndownService.calculate(1L);
+        BurndownResponse response = burndownService.calculate(1L, currentUser);
 
         response.points().forEach(point -> assertEquals(5, point.remaining()));
     }
@@ -88,7 +103,19 @@ class BurndownServiceTest {
     void calculate_lancaExcecaoQuandoSprintNaoExiste() {
         when(sprintRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> burndownService.calculate(99L));
+        assertThrows(IllegalArgumentException.class, () -> burndownService.calculate(99L, currentUser));
+    }
+
+    private Sprint sprintComOrg() {
+        return sprintComOrg(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 10));
+    }
+
+    private Sprint sprintComOrg(LocalDate start, LocalDate end) {
+        Organization org = new Organization("Org");
+        org.setId(1L);
+        Team team = new Team("Time", org);
+        Project project = new Project("Projeto", team);
+        return new Sprint("Sprint 1", project, start, end);
     }
 
     private Task criarTask(Long id, Integer storyPoints) {

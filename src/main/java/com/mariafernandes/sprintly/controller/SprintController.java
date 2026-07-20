@@ -35,12 +35,12 @@ public class SprintController {
     }
 
     @GetMapping
-    public List<Sprint> findByProject(@RequestParam Long projectId) {
-        return service.findByProject(projectId);
+    public List<Sprint> findByProject(@RequestParam Long projectId, @AuthenticationPrincipal User currentUser) {
+        return service.findByProject(projectId, currentUser);
     }
 
     @GetMapping("/{id}/burndown")
-    public BurndownResponse calculateBurndown(@PathVariable Long id) {
-        return burndownService.calculate(id);
+    public BurndownResponse calculateBurndown(@PathVariable Long id, @AuthenticationPrincipal User currentUser) {
+        return burndownService.calculate(id, currentUser);
     }
 }

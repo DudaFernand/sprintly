@@ -58,7 +58,11 @@ public class CommentService {
         return comment;
     }
 
-    public List<Comment> findByTask(Long taskId) {
+    public List<Comment> findByTask(Long taskId, User currentUser) {
+        Task task = taskRepository.findById(taskId)
+            .orElseThrow(() -> new IllegalArgumentException("Tarefa não encontrada"));
+        Long organizationId = task.getBoard().getProject().getTeam().getOrganization().getId();
+        authorizationService.requireMembership(currentUser, organizationId);
         return commentRepository.findByTaskIdOrderByCreatedAt(taskId);
     }
 

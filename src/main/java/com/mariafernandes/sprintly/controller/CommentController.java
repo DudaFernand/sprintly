@@ -26,7 +26,7 @@ public class CommentController {
     }
 
     @GetMapping
-    public List<Comment> findByTask(@RequestParam Long taskId) {
-        return service.findByTask(taskId);
+    public List<Comment> findByTask(@RequestParam Long taskId, @AuthenticationPrincipal User currentUser) {
+        return service.findByTask(taskId, currentUser);
     }
 }

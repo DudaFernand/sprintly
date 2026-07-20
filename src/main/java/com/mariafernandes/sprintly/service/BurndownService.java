@@ -5,6 +5,7 @@ import com.mariafernandes.sprintly.dto.BurndownPoint;
 import com.mariafernandes.sprintly.dto.BurndownResponse;
 import com.mariafernandes.sprintly.repository.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -22,18 +23,25 @@ public class BurndownService {
     private final TaskRepository taskRepository;
     private final AuditLogRepository auditLogRepository;
     private final StatusRepository statusRepository;
+    private final AuthorizationService authorizationService;
 
     public BurndownService(SprintRepository sprintRepository, TaskRepository taskRepository,
-                            AuditLogRepository auditLogRepository, StatusRepository statusRepository) {
+                            AuditLogRepository auditLogRepository, StatusRepository statusRepository,
+                            AuthorizationService authorizationService) {
         this.sprintRepository = sprintRepository;
         this.taskRepository = taskRepository;
         this.auditLogRepository = auditLogRepository;
         this.statusRepository = statusRepository;
+        this.authorizationService = authorizationService;
     }
 
-    public BurndownResponse calculate(Long sprintId) {
+    @Transactional(readOnly = true)
+    public BurndownResponse calculate(Long sprintId, User currentUser) {
         Sprint sprint = sprintRepository.findById(sprintId)
             .orElseThrow(() -> new IllegalArgumentException("Sprint não encontrada"));
+
+        Long organizationId = sprint.getProject().getTeam().getOrganization().getId();
+        authorizationService.requireMembership(currentUser, organizationId);
 
         List<Task> tasks = taskRepository.findBySprintId(sprintId);
         int totalStoryPoints = tasks.stream()

@@ -74,7 +74,11 @@ public class TaskService {
         return taskRepository.save(task);
     }
 
-    public List<Task> findByBoard(Long boardId) {
+    public List<Task> findByBoard(Long boardId, User currentUser) {
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new IllegalArgumentException("Board não encontrado"));
+        Long organizationId = board.getProject().getTeam().getOrganization().getId();
+        authorizationService.requireMembership(currentUser, organizationId);
         return taskRepository.findByBoardId(boardId);
     }
 
@@ -112,18 +116,24 @@ public class TaskService {
         return saved;
     }
 
-    public Task addLabel(Long taskId, Long labelId) {
+    public Task addLabel(Long taskId, Long labelId, User currentUser) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("Tarefa não encontrada"));
+        Long organizationId = task.getBoard().getProject().getTeam().getOrganization().getId();
+        authorizationService.requireMembership(currentUser, organizationId);
+
         Label label = labelRepository.findById(labelId)
                 .orElseThrow(() -> new IllegalArgumentException("Label não encontrada"));
         task.getLabels().add(label);
         return taskRepository.save(task);
     }
 
-    public Task removeLabel(Long taskId, Long labelId) {
+    public Task removeLabel(Long taskId, Long labelId, User currentUser) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("Tarefa não encontrada"));
+        Long organizationId = task.getBoard().getProject().getTeam().getOrganization().getId();
+        authorizationService.requireMembership(currentUser, organizationId);
+
         task.getLabels().removeIf(l -> l.getId().equals(labelId));
         return taskRepository.save(task);
     }

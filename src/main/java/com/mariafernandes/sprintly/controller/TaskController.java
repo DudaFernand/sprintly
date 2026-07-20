@@ -27,8 +27,8 @@ public class TaskController {
     }
 
     @GetMapping
-    public List<Task> findByBoard(@RequestParam Long boardId) {
-        return service.findByBoard(boardId);
+    public List<Task> findByBoard(@RequestParam Long boardId, @AuthenticationPrincipal User currentUser) {
+        return service.findByBoard(boardId, currentUser);
     }
 
     @PatchMapping("/{id}/status")
@@ -41,13 +41,15 @@ public class TaskController {
     }
 
     @PostMapping("/{taskId}/labels/{labelId}")
-    public Task addLabel(@PathVariable Long taskId, @PathVariable Long labelId) {
-        return service.addLabel(taskId, labelId);
+    public Task addLabel(@PathVariable Long taskId, @PathVariable Long labelId,
+                         @AuthenticationPrincipal User currentUser) {
+        return service.addLabel(taskId, labelId, currentUser);
     }
 
     @DeleteMapping("/{taskId}/labels/{labelId}")
-    public Task removeLabel(@PathVariable Long taskId, @PathVariable Long labelId) {
-        return service.removeLabel(taskId, labelId);
+    public Task removeLabel(@PathVariable Long taskId, @PathVariable Long labelId,
+                            @AuthenticationPrincipal User currentUser) {
+        return service.removeLabel(taskId, labelId, currentUser);
     }
 
     @PatchMapping("/{taskId}/sprint")

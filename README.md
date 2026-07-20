@@ -135,7 +135,7 @@ Auth: `Authorization: Bearer <accessToken>` (exceto `/auth/**`)
 | Método | Path | |
 |--------|------|---|
 | POST | `/organizations` | cria org + membership ADMIN |
-| GET | `/organizations` | todas as organizações (sem filtro por membership — ver Próximos passos) |
+| GET | `/organizations` | só orgs em que o usuário tem membership |
 | POST | `/memberships` | admin |
 | GET | `/memberships?organizationId=` | |
 | POST | `/teams` | admin |
@@ -168,11 +168,12 @@ Auth: `Authorization: Bearer <accessToken>` (exceto `/auth/**`)
 |--------|------|---|
 | POST | `/comments` | `@email` gera menção |
 | GET | `/comments?taskId=` | |
+| GET | `/users?organizationId=` | membros da org (exige membership) |
 | GET | `/notifications` | do usuário autenticado |
 | GET | `/audit-logs?entityType=&entityId=` | |
 | GET | `/audit-logs/{entityType}/{entityId}` | mesma consulta via path |
 
-Também existe `/users` (CRUD básico). Bodies seguem as entidades/DTOs — o caminho mais rápido de explorar ainda é Postman/Insomnia ou pelos testes.
+Bodies seguem as entidades/DTOs — o caminho mais rápido de explorar ainda é o Swagger ou os testes.
 
 ## Como rodar
 
@@ -184,10 +185,10 @@ docker compose up -d postgres rabbitmq
 
 Postgres em `localhost:5433`. Rabbit em `5672` (management: `http://localhost:15672`, user/pass `sprintly`).
 
-Defina o segredo JWT:
+Coloque o segredo JWT no `.env` na raiz (o app carrega esse arquivo no startup; não vai pro git):
 
-```powershell
-$env:JWT_SECRET="troque-por-uma-chave-longa-e-aleatoria"
+```env
+JWT_SECRET=troque-por-uma-chave-longa-e-aleatoria
 ```
 
 Suba a API:
@@ -196,13 +197,13 @@ Suba a API:
 ./mvnw spring-boot:run
 ```
 
-Ou o stack inteiro (`JWT_SECRET` no ambiente / `.env`):
+Ou o stack inteiro (Compose também lê o `.env`):
 
 ```bash
 docker compose up --build
 ```
 
-API em `http://localhost:8081`. Config base em `application.properties`; no CI/Docker, `SPRING_*` e `JWT_*` sobrescrevem o necessário.
+API em `http://localhost:8081`. Swagger UI em `http://localhost:8081/swagger-ui.html`. Config base em `application.properties`; no CI/Docker, `SPRING_*` e `JWT_*` sobrescrevem o necessário.
 
 ## Testes
 
@@ -235,9 +236,7 @@ O `Dockerfile` é multi-stage (Maven → JRE Alpine). Não tem deploy automátic
 
 ## Próximos passos
 
-- Filtrar `GET /organizations` pelas memberships do usuário logado (hoje lista tudo)
 - Migrar de `ddl-auto=update` para Flyway/Liquibase
-- Swagger/OpenAPI (parar de depender só deste README pro contrato)
 - Logout / revoke e **reuse detection** no refresh (token revogado reaparecendo → invalidar a família)
 - Anexos em comentários
 - Outbox (ou retry) nas notificações
