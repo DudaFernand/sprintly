@@ -2,8 +2,10 @@ package com.mariafernandes.sprintly.service;
 
 import com.mariafernandes.sprintly.domain.AuditLog;
 import com.mariafernandes.sprintly.domain.User;
+import com.mariafernandes.sprintly.dto.AuditLogResponse;
 import com.mariafernandes.sprintly.repository.AuditLogRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -21,7 +23,10 @@ public class AuditService {
         repository.save(auditLog);
     }
 
-    public List<AuditLog> findByEntity(String entityType, Long entityId) {
-        return repository.findByEntityTypeAndEntityId(entityType, entityId);
+    @Transactional(readOnly = true)
+    public List<AuditLogResponse> findByEntity(String entityType, Long entityId) {
+        return repository.findByEntityTypeAndEntityId(entityType, entityId).stream()
+            .map(AuditLogResponse::from)
+            .toList();
     }
 }

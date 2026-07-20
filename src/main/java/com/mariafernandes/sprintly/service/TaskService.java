@@ -91,10 +91,12 @@ public class TaskService {
         Task saved = taskRepository.save(task);
     
         String changes = String.format(
-            "status: %s -> %s | storyPoints: %s | sprintId: %s",
-            oldStatus.getName(), newStatus.getName(),
+            "status: %s(id=%d) -> %s(id=%d) | storyPoints: %s | sprintId: %s",
+            oldStatus.getName(), oldStatus.getId(),
+            newStatus.getName(), newStatus.getId(),
             task.getStoryPoints(), task.getSprint() != null ? task.getSprint().getId() : "null"
         );
+
         auditService.log(currentUser, "Task", taskId, "STATUS_CHANGE", changes);
     
         return saved;
