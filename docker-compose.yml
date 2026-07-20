@@ -23,5 +23,27 @@ services:
       RABBITMQ_DEFAULT_USER: sprintly
       RABBITMQ_DEFAULT_PASS: sprintly
 
+  app:
+    build: .
+    container_name: sprintly-app
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - rabbitmq
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/sprintly
+      SPRING_DATASOURCE_USERNAME: sprintly
+      SPRING_DATASOURCE_PASSWORD: sprintly
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: sprintly
+      SPRING_RABBITMQ_PASSWORD: sprintly
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_EXPIRATION: 900000
+      JWT_REFRESH_EXPIRATION: 2592000000
+      SERVER_PORT: 8081
+
 volumes:
   pgdata:
