@@ -19,15 +19,17 @@ public class CommentService {
     private final UserRepository userRepository;
     private final CommentMentionRepository mentionRepository;
     private final AuthorizationService authorizationService;
+    private final NotificationPublisher notificationPublisher;
 
     public CommentService(CommentRepository commentRepository, TaskRepository taskRepository,
                            UserRepository userRepository, CommentMentionRepository mentionRepository,
-                           AuthorizationService authorizationService) {
+                           AuthorizationService authorizationService, NotificationPublisher notificationPublisher) {
         this.commentRepository = commentRepository;
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
         this.mentionRepository = mentionRepository;
         this.authorizationService = authorizationService;
+        this.notificationPublisher = notificationPublisher;
     }
 
     public Comment create(CreateCommentRequest request, User author) {
@@ -44,7 +46,12 @@ public class CommentService {
             userRepository.findByEmail(email).ifPresent(mentionedUser -> {
                 CommentMention mention = new CommentMention(comment, mentionedUser);
                 mentionRepository.save(mention);
-                // aqui vai haver um evento no RabbitMQ pra notificar o usuário
+
+                notificationPublisher.publish(
+                    mentionedUser.getId(),
+                    "mention",
+                    author.getUsername() + " mencionou você em um comentário: \"" + request.content() + "\""
+                );
             })
         );
 

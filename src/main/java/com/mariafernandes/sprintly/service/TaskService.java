@@ -20,12 +20,13 @@ public class TaskService {
     private final AuthorizationService authorizationService;
     private final SprintRepository sprintRepository;
     private final AuditService auditService;
+    private final NotificationPublisher notificationPublisher;
 
     public TaskService(TaskRepository taskRepository, BoardRepository boardRepository,
             StatusRepository statusRepository, EpicRepository epicRepository,
             UserRepository userRepository, LabelRepository labelRepository, 
             AuthorizationService authorizationService, SprintRepository sprintRepository,
-            AuditService auditService) {
+            AuditService auditService, NotificationPublisher notificationPublisher) {
         this.taskRepository = taskRepository;
         this.boardRepository = boardRepository;
         this.statusRepository = statusRepository;
@@ -35,6 +36,7 @@ public class TaskService {
         this.authorizationService = authorizationService;
         this.sprintRepository = sprintRepository;
         this.auditService = auditService;
+        this.notificationPublisher = notificationPublisher;
     }
 
     public Task create(CreateTaskRequest request, User reporter) {
@@ -89,7 +91,15 @@ public class TaskService {
     
         task.setStatus(newStatus);
         Task saved = taskRepository.save(task);
-    
+
+        if (task.getAssignee() != null) {
+            notificationPublisher.publish(
+                task.getAssignee().getId(),
+                "status_change",
+                "A tarefa \"" + task.getTitle() + "\" mudou para " + newStatus.getName()
+            );
+        }
+
         String changes = String.format(
             "status: %s(id=%d) -> %s(id=%d) | storyPoints: %s | sprintId: %s",
             oldStatus.getName(), oldStatus.getId(),
