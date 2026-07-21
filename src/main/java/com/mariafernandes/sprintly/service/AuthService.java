@@ -7,12 +7,14 @@ import com.mariafernandes.sprintly.repository.RefreshTokenRepository;
 import com.mariafernandes.sprintly.repository.UserRepository;
 import com.mariafernandes.sprintly.security.JwtService;
 import com.mariafernandes.sprintly.security.RefreshTokenGenerator;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @Service
 public class AuthService {
@@ -23,21 +25,22 @@ public class AuthService {
     private final JwtService jwtService;
     private final RefreshTokenGenerator refreshTokenGenerator;
     private final AuthenticationManager authenticationManager;
-
-    private static final long REFRESH_EXPIRATION_DAYS = 30;
+    private final long refreshExpirationMs;
 
     public AuthService(UserRepository userRepository,
                         RefreshTokenRepository refreshTokenRepository,
                         PasswordEncoder passwordEncoder,
                         JwtService jwtService,
                         RefreshTokenGenerator refreshTokenGenerator,
-                        AuthenticationManager authenticationManager) {
+                        AuthenticationManager authenticationManager,
+                        @Value("${jwt.refresh-expiration}") long refreshExpirationMs) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.refreshTokenGenerator = refreshTokenGenerator;
         this.authenticationManager = authenticationManager;
+        this.refreshExpirationMs = refreshExpirationMs;
     }
 
     public AuthResponse register(String email, String rawPassword) {
@@ -82,7 +85,7 @@ public class AuthService {
         RefreshToken refreshToken = new RefreshToken(
             refreshTokenValue,
             user,
-            LocalDateTime.now().plusDays(REFRESH_EXPIRATION_DAYS)
+            LocalDateTime.now().plus(refreshExpirationMs, ChronoUnit.MILLIS)
         );
         refreshTokenRepository.save(refreshToken);
 

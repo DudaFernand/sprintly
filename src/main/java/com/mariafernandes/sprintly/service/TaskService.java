@@ -2,6 +2,7 @@ package com.mariafernandes.sprintly.service;
 
 import com.mariafernandes.sprintly.domain.*;
 import com.mariafernandes.sprintly.dto.CreateTaskRequest;
+import com.mariafernandes.sprintly.dto.UpdateTaskRequest;
 import com.mariafernandes.sprintly.repository.*;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +14,7 @@ public class TaskService {
 
     private final TaskRepository taskRepository;
     private final BoardRepository boardRepository;
+    private final ProjectRepository projectRepository;
     private final StatusRepository statusRepository;
     private final EpicRepository epicRepository;
     private final UserRepository userRepository;
@@ -23,12 +25,14 @@ public class TaskService {
     private final NotificationPublisher notificationPublisher;
 
     public TaskService(TaskRepository taskRepository, BoardRepository boardRepository,
+            ProjectRepository projectRepository,
             StatusRepository statusRepository, EpicRepository epicRepository,
-            UserRepository userRepository, LabelRepository labelRepository, 
+            UserRepository userRepository, LabelRepository labelRepository,
             AuthorizationService authorizationService, SprintRepository sprintRepository,
             AuditService auditService, NotificationPublisher notificationPublisher) {
         this.taskRepository = taskRepository;
         this.boardRepository = boardRepository;
+        this.projectRepository = projectRepository;
         this.statusRepository = statusRepository;
         this.epicRepository = epicRepository;
         this.userRepository = userRepository;
@@ -80,6 +84,55 @@ public class TaskService {
         Long organizationId = board.getProject().getTeam().getOrganization().getId();
         authorizationService.requireMembership(currentUser, organizationId);
         return taskRepository.findByBoardId(boardId);
+    }
+
+    public List<Task> findBySprint(Long sprintId, User currentUser) {
+        Sprint sprint = sprintRepository.findById(sprintId)
+                .orElseThrow(() -> new IllegalArgumentException("Sprint não encontrada"));
+        Long organizationId = sprint.getProject().getTeam().getOrganization().getId();
+        authorizationService.requireMembership(currentUser, organizationId);
+        return taskRepository.findBySprintId(sprintId);
+    }
+
+    public List<Task> findByProject(Long projectId, User currentUser) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new IllegalArgumentException("Project não encontrado"));
+        Long organizationId = project.getTeam().getOrganization().getId();
+        authorizationService.requireMembership(currentUser, organizationId);
+        return taskRepository.findByProjectId(projectId);
+    }
+
+    public Task update(Long taskId, UpdateTaskRequest request, User currentUser) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("Tarefa não encontrada"));
+
+        Long organizationId = task.getBoard().getProject().getTeam().getOrganization().getId();
+        authorizationService.requireMembership(currentUser, organizationId);
+
+        task.setTitle(request.title());
+        task.setDescription(request.description());
+        task.setType(request.type());
+        task.setPriority(request.priority());
+        task.setStoryPoints(request.storyPoints());
+
+        if (request.statusId() != null) {
+            Status status = statusRepository.findById(request.statusId())
+                    .orElseThrow(() -> new IllegalArgumentException("Status não encontrado"));
+            task.setStatus(status);
+        }
+
+        if (request.assigneeId() != null) {
+            User assignee = userRepository.findById(request.assigneeId())
+                    .orElseThrow(() -> new IllegalArgumentException("Usuário responsável não encontrado"));
+            task.setAssignee(assignee);
+        } else {
+            task.setAssignee(null);
+        }
+
+        Task saved = taskRepository.save(task);
+        auditService.log(currentUser, "Task", taskId, "UPDATE",
+                "title/description/type/priority/status/assignee atualizados");
+        return saved;
     }
 
     public Task updateStatus(Long taskId, Long newStatusId, User currentUser) {

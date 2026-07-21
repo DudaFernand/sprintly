@@ -2,7 +2,16 @@
 
 API backend de board Kanban/sprint. Organização multi-tenant, boards com colunas configuráveis, tarefas, comentários com menção, burndown e notificações assíncronas. Sem frontend neste repo.
 
-**Stack:** Java 21 · Spring Boot 4 · PostgreSQL · RabbitMQ · JWT (access + refresh)
+**Stack:** Java 21 · Spring Boot 4 · PostgreSQL · RabbitMQ · JWT (access + refresh) · Flyway
+
+### Destaques técnicos
+
+- RBAC por membership na organização (leituras e escritas passam por `AuthorizationService`)
+- Refresh token com rotação + sliding expiration
+- Burndown reconstruído a partir do audit log (trade-off documentado abaixo)
+- Notificações assíncronas via RabbitMQ
+- Schema versionado com Flyway (`ddl-auto=validate`)
+- OpenAPI/Swagger + CI (testes + build Docker)
 
 ## O que tem
 
@@ -100,12 +109,10 @@ Em vez de uma tabela de histórico de story points, o burndown reconstrói o pro
 ### Refresh token: rotação + sliding expiration
 
 - Access JWT ~15 min (`jwt.access-expiration`)
-- Refresh opaco (64 bytes aleatórios), persistido, válido por 30 dias
+- Refresh opaco (64 bytes aleatórios), persistido; TTL via `jwt.refresh-expiration` (default 30 dias)
 - Em `POST /auth/refresh`: o antigo é revogado e sai um novo par, com nova data de expiração (sliding)
 
 Ainda não tem logout. Token antigo para de valer na próxima rotação; enquanto estiver válido e não revogado, continua usável.
-
-> Nota: o TTL de 30 dias está hardcoded no `AuthService`. A propriedade `jwt.refresh-expiration` / `JWT_REFRESH_EXPIRATION` existe no Compose/CI, mas o serviço não lê ela ainda.
 
 ### Notificações via RabbitMQ
 
@@ -113,9 +120,13 @@ Menção em comentário e mudança de status (task com assignee) publicam em `sp
 
 Se o Rabbit cair no momento do publish, a request HTTP falha junto — não tem outbox. Aceitável agora; outbox (ou retry) seria o caminho se a entrega precisar ser confiável de verdade.
 
-### `ddl-auto=update`
+### Migrações (Flyway)
 
-Schema pelo Hibernate. Ok em dev e no CI com banco fresco. **Não é migração.** Próximo passo óbvio: Flyway ou Liquibase com scripts versionados, e `update` fora de qualquer ambiente compartilhado.
+O schema é versionado em `src/main/resources/db/migration/`. Hibernate fica em `ddl-auto=validate` — não altera tabela sozinho.
+
+Banco já existente (dev local): `baseline-on-migrate=true` registra a V1 sem recriar. Banco fresco (CI): a V1 sobe o schema do zero.
+
+Testes usam H2 com `ddl-auto=create-drop`, Flyway desligado e listeners RabbitMQ com `auto-startup=false`. O CI sobe Postgres + RabbitMQ como services.
 
 ## Endpoints
 
@@ -189,7 +200,10 @@ Coloque o segredo JWT no `.env` na raiz (o app carrega esse arquivo no startup; 
 
 ```env
 JWT_SECRET=troque-por-uma-chave-longa-e-aleatoria
+CORS_ALLOWED_ORIGINS=http://localhost:3000
 ```
+
+Várias origins: separe por vírgula (`http://localhost:3000,http://localhost:5173`).
 
 Suba a API:
 
@@ -236,12 +250,12 @@ O `Dockerfile` é multi-stage (Maven → JRE Alpine). Não tem deploy automátic
 
 ## Próximos passos
 
-- Migrar de `ddl-auto=update` para Flyway/Liquibase
 - Logout / revoke e **reuse detection** no refresh (token revogado reaparecendo → invalidar a família)
 - Anexos em comentários
 - Outbox (ou retry) nas notificações
 - Materializar eventos de conclusão pro burndown não depender do texto do audit
 - Papéis mais granulares (ex.: por projeto), se o multi-tenant crescer
+- DnD no board (front) e issue key estilo `PROJ-123`
 
 ## Estrutura
 

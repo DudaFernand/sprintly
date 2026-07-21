@@ -3,6 +3,7 @@ package com.mariafernandes.sprintly.controller;
 import com.mariafernandes.sprintly.domain.Task;
 import com.mariafernandes.sprintly.domain.User;
 import com.mariafernandes.sprintly.dto.CreateTaskRequest;
+import com.mariafernandes.sprintly.dto.UpdateTaskRequest;
 import com.mariafernandes.sprintly.service.TaskService;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,8 +28,28 @@ public class TaskController {
     }
 
     @GetMapping
-    public List<Task> findByBoard(@RequestParam Long boardId, @AuthenticationPrincipal User currentUser) {
-        return service.findByBoard(boardId, currentUser);
+    public List<Task> find(
+            @RequestParam(required = false) Long boardId,
+            @RequestParam(required = false) Long sprintId,
+            @RequestParam(required = false) Long projectId,
+            @AuthenticationPrincipal User currentUser) {
+        if (boardId != null) {
+            return service.findByBoard(boardId, currentUser);
+        }
+        if (sprintId != null) {
+            return service.findBySprint(sprintId, currentUser);
+        }
+        if (projectId != null) {
+            return service.findByProject(projectId, currentUser);
+        }
+        throw new IllegalArgumentException("Informe boardId, sprintId ou projectId");
+    }
+
+    @PatchMapping("/{id}")
+    public Task update(@PathVariable Long id,
+                       @Valid @RequestBody UpdateTaskRequest request,
+                       @AuthenticationPrincipal User currentUser) {
+        return service.update(id, request, currentUser);
     }
 
     @PatchMapping("/{id}/status")
